@@ -51,29 +51,61 @@ class Network():
         return value
 
     def draw(self):
-        turtle.setup(.75, .50)
+        t = self.setup_turtle()
         width, height = turtle.window_width(), turtle.window_height()
+        margin_x = .05 * width
+        margin_y = .05 * height
+
+        # Calculate the position of each node
+        points = self.calculate_node_positions(width, height, margin_x, margin_y)
+
+        # Draw the nodes
+        self.draw_nodes(t, points)
+
+        # Draw the connections between layers 
+        self.draw_connections(t, points)
+        
+        turtle.mainloop()
+
+    def setup_turtle(self):
+        turtle.setup(.75, .50)
         t = turtle.Turtle(visible=False)
         t.speed(10)
         t.penup()
         t.right(90)
-        margin_x = .05 * width
-        margin_y = .05 * height
+        return t
 
-        # Draw input layer
-        t.goto(- width / 2 + margin_x, height / 2 - margin_y)
-        for i in range(self.num_inputs):
-            t.forward((height - 2 * margin_y) / (self.num_inputs + 1))
-            t.dot(10)
+    def calculate_node_positions(self, width, height, margin_x, margin_y):
+        # Calculate the position of each node on the input layer
+        points = [[[- width / 2 + margin_x,
+                    (point + 1) * (height - 2 * margin_y) / (self.num_inputs + 1) - (height / 2) + margin_y] 
+                    for point in range(self.num_inputs)]]
 
-        # Draw the hidden and output layers
-        for i in range(len(self.layers)):
-            t.goto(- width / 2 + margin_x + (i + 1) * (width - 2 * margin_x) / len(self.layers), height / 2 - margin_y)
-            for j in range(self.layers[i].num_nodes_out):
-                t.forward((height -  2 * margin_y) / (self.layers[i].num_nodes_out + 1))
-                t.dot(10)
+        # Calculate the position of eath node for each hidden and output layer  
+        for layer in range(len(self.layers)):
+            points.append([])
+            for point in range(self.layers[layer].num_nodes_out):
+                points[layer + 1].append([])
+                points[layer + 1][point].append(layer * (width - 2 * margin_x) / (len(self.layers)))
+                points[layer + 1][point].append((point + 1) * (height - 2 * margin_y) / (self.layers[layer].num_nodes_out + 1) - height / 2 + margin_y)
         
-        turtle.mainloop()
+        return points
+
+    def draw_nodes(self, t, points):
+        for layer in points:
+            for point in layer:
+                t.goto(point)
+                t.dot(10)
+
+    def draw_connections(self, t, points):
+        for layer_index in range(1, len(points)):
+            for point_index in range(len(points[layer_index])):
+                for point_in_previous_layer_index in range(len(points[layer_index - 1])):
+                    t.goto(points[layer_index][point_index])
+                    t.pendown()
+                    t.pensize(round(self.layers[layer_index - 1].weights[point_index][point_in_previous_layer_index]))
+                    t.goto(points[layer_index - 1][point_in_previous_layer_index])
+                    t.penup()
         
     def calculate_outputs(self, inputs):
         for layer in self.layers:
@@ -81,5 +113,5 @@ class Network():
         return inputs
 
 
-network = Network((2, 5, 2))
+network = Network((10, 5, 2))
 network.draw()
